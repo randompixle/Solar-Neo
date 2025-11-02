@@ -1,1 +1,0 @@
-# reserved for future backend plugins (rpm-ostree helpers, etc.)\n
