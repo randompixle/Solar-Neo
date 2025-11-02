@@ -1,6 +1,6 @@
-# neo — Universal APT-Style Package Installer for Every Linux Distro
+# Solar neo — Universal APT-Style Package Installer for Every Linux Distro
 
-**neo** lets you use APT-style commands on distros that **don’t use apt**  
+**Sola Neo** lets you use APT-style commands on distros that **don’t use apt**  
 (Bazzite / Fedora rpm-ostree, Arch, etc.) — *no extra setup needed.*
 
 Auto-detects your system backend  
@@ -24,13 +24,13 @@ Unified installed app listing (system + flatpak)
   - **AUR** helper if available
 - Commands:
   ```bash
-  neo install <pkg>
-  neo remove <pkg>
-  neo search <pkg>
-  neo info <pkg>
-  neo list
-  neo update
-  neo upgrade
-  neo backend list
-  neo setup
-  neo self-update
+  solar install <pkg>
+  solar remove <pkg>
+  soalr search <pkg>
+  solar info <pkg>
+  solar list
+  solar update
+  solar upgrade
+  solar backend list
+  solar setup
+  solar self-update
