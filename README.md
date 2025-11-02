@@ -9,7 +9,7 @@ Flatpak fallback when system package missing
 Supports AUR if installed (yay/paru)  
 Unified installed app listing (system + flatpak)
 
-> Just type `neo install <package>`
+> Just type `solar install <package>`
 
 ---
 
