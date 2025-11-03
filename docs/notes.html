@@ -37,15 +37,15 @@
     <div class="grid two">
       <div>
         <h2>How it works</h2>
-        <p>The interface calls a small CGI helper on the docs server. Notes are appended to <code class="mono">notes/notes.json</code> using the shared password so you do not need a GitHub login.</p>
+        <p>The form supports two submission paths so you can keep publishing even if one option is unavailable:</p>
         <ul class="list-spaced">
-          <li>Keep entries short—bullets render exactly as plain text in the log.</li>
-          <li>Avoid private data. Everything you publish is visible to the community.</li>
-          <li>Rotate the password often by setting <code class="mono">SOLAR_NOTES_PASSWORD</code> when hosting locally.</li>
+          <li><strong>Shared password:</strong> When hosting locally with <code class="mono">python -m http.server --cgi</code>, enter the shared code and the helper at <code class="mono">cgi-bin/submit_note.py</code> will append to <code class="mono">notes/notes.json</code>.</li>
+          <li><strong>GitHub token:</strong> Leave the password blank to commit via the GitHub API using your personal token stored in <code class="mono">localStorage</code> as <code class="mono">SOLAR_GH_TOKEN</code>.</li>
+          <li>Keep entries short—bullets render exactly as plain text in the log, and avoid private data.</li>
         </ul>
       </div>
       <div class="callout">
-        <strong>Quick tip:</strong> The default password is <code class="mono">Supersecrectcode1!</code>. Set <code class="mono">SOLAR_NOTES_PASSWORD</code> in your environment to change it when serving with <code class="mono">python -m http.server --cgi</code>.
+        <p><strong>Quick tip:</strong> The default password is <code class="mono">Supersecrectcode1!</code>. Rotate it by setting <code class="mono">SOLAR_NOTES_PASSWORD</code> when serving with CGI. If you prefer GitHub commits, create a fine-grained token with <em>Contents: Read &amp; write</em> access and store it as <code class="mono">SOLAR_GH_TOKEN</code> in your browser.</p>
       </div>
     </div>
   </section>
@@ -68,7 +68,7 @@
         <button id="submit" class="btn btn-primary" type="button">Submit note</button>
         <div id="msg" class="status small" role="status" aria-live="polite"></div>
       </div>
-      <p class="small muted">The default password is <code class="mono">Supersecrectcode1!</code>. Change it by setting <code class="mono">SOLAR_NOTES_PASSWORD</code> before starting the server.</p>
+      <p class="small muted">Provide the shared password when using the bundled CGI helper, or leave it blank to submit with your GitHub token from <code class="mono">localStorage</code>. The default password is <code class="mono">Supersecrectcode1!</code>.</p>
     </div>
 
     <div id="note-log" class="panel notes-browser">

@@ -2,6 +2,9 @@ import {h} from './common.js';
 
 const NOTES_PATH='notes/notes.json';
 const SUBMIT_ENDPOINT='../cgi-bin/submit_note.py';
+const OWNER='randompixle';
+const REPO='Solar-Neo';
+const BRANCH='main';
 
 function setStatus(msgEl, type, text){
   if(!msgEl) return;
@@ -44,6 +47,95 @@ function renderNotes(container, data){
   container.append(frag);
 }
 
+async function fetchJSON(url){
+  const res=await fetch(url,{cache:'no-store'});
+  if(res.status===404){
+    return {};
+  }
+  if(!res.ok){
+    throw new Error(`HTTP ${res.status}`);
+  }
+  try{
+    return await res.json();
+  }catch(err){
+    throw new Error('Invalid notes payload');
+  }
+}
+
+async function loadFromLocal(){
+  return fetchJSON(`../${NOTES_PATH}?cache=`+Date.now());
+}
+
+async function loadFromGitHubRaw(){
+  return fetchJSON(`https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${NOTES_PATH}?cache=`+Date.now());
+}
+
+function getToken(){
+  return (localStorage.getItem('SOLAR_GH_TOKEN')||'').trim();
+}
+
+async function shaOf(path, token){
+  const res=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}`,{
+    headers:{
+      'Accept':'application/vnd.github+json',
+      'Authorization':`Bearer ${token}`
+    }
+  });
+  if(res.status===404){
+    return null;
+  }
+  if(!res.ok){
+    const text=await res.text();
+    throw new Error(`GitHub metadata failed: ${res.status} ${text}`);
+  }
+  const json=await res.json();
+  return json?.sha||null;
+}
+
+async function writeNotesToGit(notes,pkg){
+  const token=getToken();
+  if(!token){
+    throw new Error('Store a GitHub token in localStorage as `SOLAR_GH_TOKEN` or use the shared password.');
+  }
+  const content=JSON.stringify(notes,null,2)+'\n';
+  const body={
+    message:`Add note for ${pkg}`,
+    content:btoa(unescape(encodeURIComponent(content))),
+    branch:BRANCH
+  };
+  const sha=await shaOf(NOTES_PATH,token);
+  if(sha){
+    body.sha=sha;
+  }
+  const res=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${NOTES_PATH}`,{
+    method:'PUT',
+    headers:{
+      'Accept':'application/vnd.github+json',
+      'Content-Type':'application/json',
+      'Authorization':`Bearer ${token}`
+    },
+    body:JSON.stringify(body)
+  });
+  if(!res.ok){
+    const text=await res.text();
+    throw new Error(`GitHub write failed: ${res.status} ${text}`);
+  }
+  return res.json();
+}
+
+async function readNotesForWrite(){
+  try{
+    return await loadFromGitHubRaw();
+  }catch(err){
+    console.warn('Falling back to local notes for submission',err);
+    try{
+      return await loadFromLocal();
+    }catch{
+      return {};
+    }
+  }
+}
+
 export default function initNotesPage(){
   const notesList=document.querySelector('[data-notes]');
   if(!notesList) return;
@@ -60,25 +152,20 @@ export default function initNotesPage(){
     if(showSpinner){
       setNotesMessage(notesList,'Loading notes…','loading');
     }
+    let payload=null;
     try{
-      const res=await fetch(`../${NOTES_PATH}?cache=`+Date.now(),{cache:'no-store'});
-      if(res.status===404){
-        renderNotes(notesList,{});
+      payload=await loadFromLocal();
+    }catch(err){
+      console.warn('Local notes load failed, attempting GitHub',err);
+      try{
+        payload=await loadFromGitHubRaw();
+      }catch(remoteErr){
+        console.error('Failed to load notes',remoteErr);
+        setNotesMessage(notesList,'Unable to load notes. Serve the repo with `python -m http.server --cgi` or provide a GitHub token for write access.','error');
         return;
       }
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      let payload=null;
-      try{
-        payload=await res.json();
-      }catch(parseErr){
-        console.warn('Invalid notes payload, treating as empty',parseErr);
-        payload={};
-      }
-      renderNotes(notesList,payload);
-    }catch(err){
-      console.error('Failed to load notes',err);
-      setNotesMessage(notesList,'Unable to load notes. Serve the repo with `python -m http.server --cgi`; submitting a new note will recreate notes/notes.json if needed.','error');
     }
+    renderNotes(notesList,payload);
   }
 
   submitBtn?.addEventListener('click', async()=>{
@@ -86,26 +173,44 @@ export default function initNotesPage(){
     const pkg=(pkgInput?.value||'').trim();
     const note=(noteInput?.value||'').trim();
     const password=(passwordInput?.value||'').trim();
-    if(!password){ setStatus(msg,'err','Password is required.'); return; }
     if(!pkg||!note){ setStatus(msg,'err','Package and note are required.'); return; }
+
     if(submitBtn){
       submitBtn.disabled=true;
       submitBtn.setAttribute('aria-busy','true');
       submitBtn.textContent='Submitting…';
     }
+
     try{
-      const res=await fetch(SUBMIT_ENDPOINT,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({password,pkg,note})
-      });
-      let out=null;
-      try{ out=await res.json(); }catch{}
-      if(!res.ok||!out?.ok){
-        const err=out?.error||`Submission failed (${res.status})`;
-        throw new Error(err);
+      if(password){
+        const res=await fetch(SUBMIT_ENDPOINT,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({password,pkg,note})
+        });
+        let out=null;
+        try{ out=await res.json(); }catch{}
+        if(!res.ok||!out?.ok){
+          const err=out?.error||`Submission failed (${res.status})`;
+          throw new Error(err);
+        }
+      }else{
+        let notes=await readNotesForWrite();
+        if(!notes||typeof notes!=='object'||Array.isArray(notes)){
+          notes={};
+        }else{
+          notes={...notes};
+        }
+        const existing=Array.isArray(notes[pkg])?notes[pkg].slice():[];
+        existing.push(note);
+        notes[pkg]=existing;
+        await writeNotesToGit(notes,pkg);
       }
+
       setStatus(msg,'ok','Note submitted.');
+      if(!password && passwordInput){
+        passwordInput.value='';
+      }
       if(pkgInput) pkgInput.value='';
       if(noteInput) noteInput.value='';
       await loadNotes({showSpinner:false});
