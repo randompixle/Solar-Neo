@@ -1,5 +1,51 @@
-import {BASE,getJSON,h,initTheme} from './common.js';
-const INDEX = `${BASE}/Versions/Version_Index.json`;
-function card(v){ return h('a',{class:'card',href:`./version.html?v=${encodeURIComponent(v.version)}`},[ h('div',{class:'card-title'},v.name), h('div',{class:'card-sub'},`Version ${v.version}`), h('div',{class:'card-foot'}, v.date?`Released ${v.date}`:'Release') ]); }
-async function main(){ initTheme(); const wrap=document.getElementById('grid'); const data=await getJSON(INDEX); const all=(data.versions||[]).sort((a,b)=>(b.version||'').localeCompare(a.version||'')); all.forEach(v=>wrap.append(card(v))); }
-main().catch(e=>{ document.getElementById('grid').innerHTML = `<div class="panel">Failed to load versions index: ${e}</div>`; });
+const API_RELEASES = "https://api.github.com/repos/randompixle/Solar-Neo/releases";
+
+async function loadVersions() {
+    const container = document.getElementById("version-list");
+    container.innerHTML = "<p>Loading…</p>";
+
+    try {
+        const res = await fetch(API_RELEASES);
+        if (!res.ok) throw new Error("GitHub API fail");
+        const releases = await res.json();
+
+        if (!releases.length) {
+            container.innerHTML = "<p>No releases found yet.</p>";
+            return;
+        }
+
+        releases.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+
+        container.innerHTML = "";
+        releases.forEach(rel => {
+            const assetZip = rel.assets.find(a => a.name.toLowerCase().endsWith(".zip"));
+            const codename = rel.name.split(" ").slice(-1)[0] || "N/A";
+
+            const card = document.createElement("div");
+            card.className = "release-card";
+            card.innerHTML = `
+                <h2>${rel.tag_name}</h2>
+                <p><strong>Codename:</strong> ${codename}</p>
+                <p><strong>Date:</strong> ${new Date(rel.published_at).toLocaleDateString()}</p>
+                <p><strong>Channel:</strong> ${rel.prerelease ? "Prerelease" : "Stable"}</p>
+                <div class="actions">
+                    ${assetZip ? `
+                        <a class="btn" href="${assetZip.browser_download_url}">
+                            Download ZIP
+                        </a>
+                    ` : `<span class="btn disabled">No ZIP asset</span>`}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+    } catch (err) {
+        console.error(err);
+        container.innerHTML = `
+            <p style="color:red;">Error loading releases.</p>
+            <p>Check GitHub rate limits or try again later.</p>
+        `;
+    }
+}
+
+loadVersions();
