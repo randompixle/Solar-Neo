@@ -2,14 +2,13 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solar Neo — Notes</title>
 <link rel="stylesheet" href="./assets/css/style.css">
-<script defer src="./assets/js/notes.js"></script>
 </head><body>
 <div class="nav container">
   <div class="brand">Solar Neo <span class="tag">Notes</span></div>
   <div class="nav-links">
     <a href="../index.HTML">Home</a>
     <a href="./versions.html">Versions</a>
-    <a href="./notes.html">Notes</a>
+    <a href="./notes.html" aria-current="page">Notes</a>
   </div>
 
   <section class="panel">
@@ -44,12 +43,9 @@
   <div class="footer">© Solar Neo — Notes</div>
 </div>
 <script type="module">
-import {initNavigation, initTheme} from './assets/js/common.js';
-import initNotesPage from './assets/js/notes.js';
-initTheme();
-initNavigation();
 import {initTheme} from './assets/js/common.js';
 import initNotesPage from './assets/js/notes.js';
+
 initTheme();
 initNotesPage();
 </script>
