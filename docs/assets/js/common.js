@@ -199,6 +199,52 @@ export function initNavigation() {
   });
 }
 
+function resolveSecretUrl() {
+  const path = (location.pathname || '').toLowerCase();
+  const inDocs = path.includes('/docs/');
+  return inDocs ? './flappy.html' : './docs/flappy.html';
+}
+
+export function initSecretGame() {
+  const logo = document.querySelector('.header-brand .logo');
+  if (!logo || logo.dataset.secretBound === 'true') {
+    return;
+  }
+
+  logo.dataset.secretBound = 'true';
+
+  const required = 5;
+  const windowMs = 1200;
+  let tapCount = 0;
+  let lastTap = 0;
+
+  const open = () => {
+    const target = logo.dataset.gameUrl || resolveSecretUrl();
+    window.location.href = target;
+  };
+
+  const register = () => {
+    const now = Date.now();
+    if (now - lastTap > windowMs) {
+      tapCount = 0;
+    }
+    tapCount += 1;
+    lastTap = now;
+    if (tapCount >= required) {
+      tapCount = 0;
+      lastTap = 0;
+      open();
+    }
+  };
+
+  logo.addEventListener('pointerdown', event => {
+    if (event.isPrimary === false) {
+      return;
+    }
+    register();
+  });
+}
+
 export async function sha256hex(buffer) {
   const digest = await crypto.subtle.digest('SHA-256', buffer);
   return Array.from(new Uint8Array(digest))
